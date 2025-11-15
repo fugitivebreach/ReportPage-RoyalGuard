@@ -1,0 +1,11 @@
+{
+  "discord": {
+    "client_id": "YOUR_DISCORD_CLIENT_ID",
+    "client_secret": "YOUR_DISCORD_CLIENT_SECRET",
+    "redirect_uri": "http://localhost:5000/callback"
+  },
+  "admins": [
+    "1317342800941023242"
+  ],
+  "secret_key": "change-this-to-a-random-secret-key"
+}
