@@ -238,10 +238,17 @@ def api_reports():
     reports = Report.query.order_by(Report.timestamp.desc()).all()
     return jsonify([report.to_dict() for report in reports])
 
+@app.before_request
+def log_request():
+    """Log all incoming requests"""
+    print(f"[REQUEST] {request.method} {request.path} - Full URL: {request.url}")
+    print(f"[REQUEST] Headers: {dict(request.headers)}")
+
 @app.errorhandler(404)
 def not_found(e):
     """Handle 404 errors"""
     print(f"[ERROR] 404 Not Found: {request.url}")
+    print(f"[ERROR] Path: {request.path}")
     print(f"[ERROR] Available routes: {[str(rule) for rule in app.url_map.iter_rules()]}")
     return f"404 Not Found: {request.path}<br><br>Available routes:<br>{'<br>'.join([str(rule) for rule in app.url_map.iter_rules()])}", 404
 
