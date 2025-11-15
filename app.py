@@ -127,9 +127,13 @@ def login():
     session['oauth_state'] = state
     return redirect(authorization_url)
 
-@app.route('/callback')
+@app.route('/callback', methods=['GET', 'POST'])
+@app.route('/callback/', methods=['GET', 'POST'])
 def callback():
     """Discord OAuth callback"""
+    print(f"[DEBUG] ========== CALLBACK ROUTE HIT ==========")
+    print(f"[DEBUG] Request URL: {request.url}")
+    print(f"[DEBUG] Request path: {request.path}")
     print(f"[DEBUG] Callback accessed. Args: {request.args}")
     print(f"[DEBUG] Headers: X-Forwarded-Proto={request.headers.get('X-Forwarded-Proto')}")
     
@@ -234,6 +238,15 @@ def api_reports():
     reports = Report.query.order_by(Report.timestamp.desc()).all()
     return jsonify([report.to_dict() for report in reports])
 
+@app.errorhandler(404)
+def not_found(e):
+    """Handle 404 errors"""
+    print(f"[ERROR] 404 Not Found: {request.url}")
+    print(f"[ERROR] Available routes: {[str(rule) for rule in app.url_map.iter_rules()]}")
+    return f"404 Not Found: {request.path}<br><br>Available routes:<br>{'<br>'.join([str(rule) for rule in app.url_map.iter_rules()])}", 404
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    print(f"[INFO] Starting app on port {port}")
+    print(f"[INFO] Registered routes: {[str(rule) for rule in app.url_map.iter_rules()]}")
     app.run(host='0.0.0.0', port=port, debug=True)
