@@ -64,7 +64,11 @@ class Report(db.Model):
 
 # Create tables
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+        print("✓ Database tables created successfully")
+    except Exception as e:
+        print(f"✗ Database error: {e}")
 
 def is_admin(user_id):
     """Check if user is an admin"""
@@ -83,11 +87,21 @@ def get_discord_oauth_session(token=None, state=None):
 @app.route('/')
 def index():
     """Home page - shows login or report form"""
+    print(f"[DEBUG] Index route accessed. Session: {session.get('user', 'No user')}")
     if 'user' not in session:
         return redirect(url_for('login_page'))
     
     user = session['user']
     return render_template('index.html', user=user, is_admin=is_admin(user['id']))
+
+@app.route('/health')
+def health():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'ok',
+        'database': database_uri.split('://')[0],
+        'discord_configured': bool(DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET)
+    })
 
 @app.route('/login_page')
 def login_page():
@@ -107,7 +121,11 @@ def login():
 @app.route('/callback')
 def callback():
     """Discord OAuth callback"""
+    print(f"[DEBUG] Callback accessed. Args: {request.args}")
+    print(f"[DEBUG] Headers: X-Forwarded-Proto={request.headers.get('X-Forwarded-Proto')}")
+    
     if 'error' in request.args:
+        print(f"[ERROR] OAuth error in callback: {request.args.get('error')}")
         return redirect(url_for('login_page'))
     
     discord = get_discord_oauth_session(state=session.get('oauth_state'))
@@ -117,6 +135,8 @@ def callback():
         callback_url = request.url
         if request.headers.get('X-Forwarded-Proto') == 'https':
             callback_url = callback_url.replace('http://', 'https://', 1)
+        
+        print(f"[DEBUG] Fetching token with callback_url: {callback_url}")
         
         token = discord.fetch_token(
             DISCORD_TOKEN_URL,
@@ -130,6 +150,8 @@ def callback():
         discord = get_discord_oauth_session(token=token)
         user_data = discord.get(f'{DISCORD_API_BASE_URL}/users/@me').json()
         
+        print(f"[DEBUG] User authenticated: {user_data.get('username')}")
+        
         session['user'] = {
             'id': user_data['id'],
             'username': user_data['username'],
@@ -139,8 +161,10 @@ def callback():
         
         return redirect(url_for('index'))
     except Exception as e:
-        print(f"OAuth error: {e}")
-        return redirect(url_for('login_page'))
+        print(f"[ERROR] OAuth error: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"OAuth Error: {str(e)}", 500
 
 @app.route('/logout')
 def logout():
