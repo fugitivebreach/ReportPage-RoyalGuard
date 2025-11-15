@@ -4,6 +4,10 @@ from requests_oauthlib import OAuth2Session
 from dotenv import load_dotenv
 import os
 from datetime import datetime
+import pymysql
+
+# Install pymysql as MySQLdb for SQLAlchemy
+pymysql.install_as_MySQLdb()
 
 # Load environment variables
 load_dotenv()
@@ -12,7 +16,18 @@ app = Flask(__name__)
 
 # Flask configuration from environment variables
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'sqlite:///reports.db')
+
+# Database configuration - prioritize DATABASE_URI, fallback to MYSQL_PUBLIC_URL, then SQLite
+database_uri = os.getenv('DATABASE_URI')
+if not database_uri:
+    mysql_url = os.getenv('MYSQL_PUBLIC_URL')
+    if mysql_url:
+        # Convert mysql:// to mysql+pymysql://
+        database_uri = mysql_url.replace('mysql://', 'mysql+pymysql://')
+    else:
+        database_uri = 'sqlite:///reports.db'
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -98,10 +113,15 @@ def callback():
     discord = get_discord_oauth_session(state=session.get('oauth_state'))
     
     try:
+        # Fix for Railway HTTPS - ensure callback URL uses https
+        callback_url = request.url
+        if request.headers.get('X-Forwarded-Proto') == 'https':
+            callback_url = callback_url.replace('http://', 'https://', 1)
+        
         token = discord.fetch_token(
             DISCORD_TOKEN_URL,
             client_secret=DISCORD_CLIENT_SECRET,
-            authorization_response=request.url
+            authorization_response=callback_url
         )
         
         session['oauth_token'] = token
