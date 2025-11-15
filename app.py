@@ -97,10 +97,19 @@ def index():
 @app.route('/health')
 def health():
     """Health check endpoint"""
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append({
+            'endpoint': rule.endpoint,
+            'methods': list(rule.methods),
+            'path': str(rule)
+        })
+    
     return jsonify({
         'status': 'ok',
         'database': database_uri.split('://')[0],
-        'discord_configured': bool(DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET)
+        'discord_configured': bool(DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET),
+        'routes': routes
     })
 
 @app.route('/login_page')
