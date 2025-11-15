@@ -70,14 +70,6 @@ with app.app_context():
     except Exception as e:
         print(f"✗ Database error: {e}")
 
-# Print all registered routes on startup
-print("\n" + "="*50)
-print("REGISTERED ROUTES:")
-print("="*50)
-for rule in app.url_map.iter_rules():
-    print(f"  {rule.endpoint:30s} {str(rule):40s} {list(rule.methods)}")
-print("="*50 + "\n")
-
 def is_admin(user_id):
     """Check if user is an admin"""
     return str(user_id) in ADMINS
@@ -252,6 +244,14 @@ def not_found(e):
     print(f"[ERROR] 404 Not Found: {request.url}")
     print(f"[ERROR] Available routes: {[str(rule) for rule in app.url_map.iter_rules()]}")
     return f"404 Not Found: {request.path}<br><br>Available routes:<br>{'<br>'.join([str(rule) for rule in app.url_map.iter_rules()])}", 404
+
+# Print all registered routes on startup (after all routes are defined)
+print("\n" + "="*50)
+print("REGISTERED ROUTES:")
+print("="*50)
+for rule in app.url_map.iter_rules():
+    print(f"  {rule.endpoint:30s} {str(rule):40s} {list(rule.methods)}")
+print("="*50 + "\n")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
